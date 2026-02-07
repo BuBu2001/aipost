@@ -33,20 +33,34 @@ function createPostHTML(post) {
         hour: '2-digit',
         minute: '2-digit'
     });
-    
+
     // Формируем блок размышлений
-    const iterationsHTML = post.thoughts.map((thought, index) => `
-        <div class="iteration">
-            <div class="iteration-header">
-                <div class="iteration-number">Итерация ${index + 1}</div>
-                <div class="iteration-time">⏱️ ${thought.duration || '0'} сек</div>
+    const iterationsHTML = post.thoughts.map((thought, index) => {
+        // Calculate duration between consecutive thoughts (except for the first one)
+        let duration = '0';
+        if (index > 0) {
+            const prevTime = new Date(post.thoughts[index - 1].timestamp);
+            const currTime = new Date(thought.timestamp);
+            const diffSeconds = Math.round((currTime - prevTime) / 1000);
+            duration = `${diffSeconds}`;
+        } else {
+            // For the first thought, use timestamp or default to 0
+            duration = thought.duration || '0';
+        }
+        
+        return `
+            <div class="iteration">
+                <div class="iteration-header">
+                    <div class="iteration-number">Итерация ${index + 1}</div>
+                    <div class="iteration-time">⏱️ ${duration} сек</div>
+                </div>
+                <div class="iteration-content">
+                    ${thought.text.replace(/\n/g, '<br>')}
+                </div>
             </div>
-            <div class="iteration-content">
-                ${thought.text.replace(/\n/g, '<br>')}
-            </div>
-        </div>
-    `).join('');
-    
+        `;
+    }).join('');
+
     return `
         <h1>${post.title}</h1>
         <div class="post-full-meta">
@@ -54,14 +68,14 @@ function createPostHTML(post) {
             <span>⚡ ${post.thoughts.length} итераций</span>
             <span>⏱️ Общее время: ${post.totalDuration || '0'} мин</span>
         </div>
-        
+
         <div class="thinking-process">
             <h3>🧠 Процесс размышления</h3>
             <p>ИИ последовательно анализировал тему, выдвигал гипотезы и пришёл к выводу.</p>
         </div>
-        
+
         ${iterationsHTML}
-        
+
         <div class="iteration">
             <div class="iteration-header">
                 <div class="iteration-number">Финальный вывод</div>

@@ -128,43 +128,53 @@ def git_commit_and_push(post_id, iteration_num):
         # Проверяем статус Git
         result = subprocess.run(['git', 'status'], capture_output=True, text=True)
         if "fatal: not a git repository" in result.stderr:
-            print("  ❌ Ошибка: это не Git-репозиторий!")
+            print("  ⚠️ Это не Git-репозиторий, пропускаю коммит и пуш")
             print(f"     Текущая папка: {os.getcwd()}")
-            return False
-        
+            print(f"     Для публикации на GitHub, инициализируйте репозиторий командой: git init")
+            return True  # Return True to continue execution even without Git
+
         # Добавляем файлы
         subprocess.run(['git', 'add', 'posts/'], check=True, capture_output=True)
-        
+
         # Проверяем, есть ли изменения для коммита
         result = subprocess.run(['git', 'diff', '--cached', '--quiet'], capture_output=True)
         if result.returncode == 0:
             print("  ℹ️ Нет изменений для коммита")
             return True
-        
+
         # Делаем коммит
         commit_msg = f"experiment: итерация #{iteration_num}"
         subprocess.run(['git', 'commit', '-m', commit_msg], check=True, capture_output=True)
-        
+
+        # Проверяем наличие удаленного репозитория
+        remote_check = subprocess.run(['git', 'remote', '-v'], capture_output=True, text=True)
+        if not remote_check.stdout.strip():
+            print("  ⚠️ Нет настроенного удаленного репозитория, пропускаю пуш")
+            print("     Для публикации на GitHub, добавьте удаленный репозиторий: git remote add origin <URL>")
+            return True
+
         # Определяем имя ветки (master или main)
-        branch_result = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], 
+        branch_result = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
                                      capture_output=True, text=True)
         branch = branch_result.stdout.strip()
-        
+
         # Пушим
         subprocess.run(['git', 'push', 'origin', branch], check=True, capture_output=True)
-        
+
         print(f"  ✓ Опубликовано на GitHub (ветка: {branch})")
         print(f"  🌐 Сайт обновится через 1-2 минуты: https://bubu2001.github.io/aipost/")
         return True
-        
+
     except subprocess.CalledProcessError as e:
         error_msg = e.stderr.decode('utf-8', errors='ignore') if e.stderr else str(e)
         print(f"  ⚠️ Ошибка Git:")
         print(f"     {error_msg[:400]}")
-        return False
+        print("     Продолжение работы без публикации на GitHub...")
+        return True  # Continue execution even if Git fails
     except Exception as e:
         print(f"  ⚠️ Неизвестная ошибка Git: {e}")
-        return False
+        print("     Продолжение работы без публикации на GitHub...")
+        return True
 
 def run_thinking_experiment(topic):
     """Основной цикл размышлений над ОДНОЙ темой"""
